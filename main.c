@@ -5,35 +5,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #define TAM_NOME_CAMINHO 100
 
-int main(int argc, char *argv[]) {
-  char caminhoPastaSaida[TAM_NOME_CAMINHO] = "Saida";
-  char caminhoPastaMerge[TAM_NOME_CAMINHO] = "Merge";
-  char caminhoPastaEntrada[TAM_NOME_CAMINHO] = "Entrada2";
+int main(int argc, char *argv[])
+{
+    char caminhoPastaEntrada[TAM_NOME_CAMINHO] = "Entrada";
+    char caminhoPastaSaida[TAM_NOME_CAMINHO] = "Saida";
+    char caminhoPastaMerge[TAM_NOME_CAMINHO] = "Merge";
 
-  PlayED *playED = criaPlayED(caminhoPastaEntrada);
+    PlayED *playED = criaPlayED(caminhoPastaEntrada);
 
-  mkdir(caminhoPastaSaida, 0700);
+    mkdir(caminhoPastaSaida, 0700);
 
-  refatoraPlayED(playED);
+    refatoraPlayED(playED);
 
-  imprimePlayEDRefatorada(playED, caminhoPastaSaida);
+    imprimePlayEDRefatorada(playED, caminhoPastaSaida);
 
-  printf("refatorada concluida\n");
+    printf("Refatorada concluida!\n");
 
-  imprimeSimilaridades(playED, caminhoPastaSaida);
+    imprimeSimilaridades(playED, caminhoPastaSaida);
 
-  printf("similaridades concluida\n");
+    printf("Similaridades concluida!\n");
 
-  mkdir(caminhoPastaMerge, 0700);
+    mkdir(caminhoPastaMerge, 0700);
 
-  mergePlayED(playED);
+    mergePlayED(playED);
 
-  imprimePlayEDMerged(playED);
+    imprimePlayEDMerged(playED);
 
-  liberaPlayED(playED);
+    printf("Merge concluida!\n");
 
-  return 0;
+    liberaPlayED(playED);
+
+    return 0;
 }

@@ -5,157 +5,177 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #define TAM_NOME_CAMINHO 300
 
-struct PlayED {
-  ListaDeUsuario *usuarios;
-  ListaDePlaylist *playlists;
-  ListaDeMusica *musicas;
+struct PlayED
+{
+    ListaDeUsuario *usuarios;
+    ListaDePlaylist *playlists;
+    ListaDeMusica *musicas;
 };
 
-ListaDeUsuario *retornaListaUsuario(PlayED *played) { return played->usuarios; }
+ListaDeUsuario *retornaListaUsuario(PlayED *played)
+{
+    if (!played)
+        return NULL;
 
-ListaDePlaylist *retornaListaPlaylists(PlayED *played) {
-  return played->playlists;
+    return played->usuarios;
 }
 
-ListaDeMusica *retornaListaMusicas(PlayED *played) { return played->musicas; }
+ListaDePlaylist *retornaListaPlaylists(PlayED *played)
+{
+    if (!played)
+        return NULL;
 
-PlayED *criaPlayED(char *caminhoPastaEntrada) {
-  PlayED *played = (PlayED *)malloc(sizeof(PlayED));
-  played->usuarios = leListaDeUsuario(caminhoPastaEntrada);
-  played->musicas = criaListaDeMusica();
-  played->playlists = criaListaDePlaylist();
-  lePlaylistsUsuarios(caminhoPastaEntrada, played);
-
-  return played;
+    return played->playlists;
 }
 
-// essa função cria a lista de Usuario e le o documento, assinalando o nome de
-// cada usuario dentro do played
-ListaDeUsuario *leListaDeUsuario(char *caminhoPastaEntrada) {
-  char *docAmizade = "amizade.txt";
-  char caminhoAmizade[TAM_NOME_CAMINHO];
+ListaDeMusica *retornaListaMusicas(PlayED *played)
+{
+    if (!played)
+        return NULL;
 
-  snprintf(caminhoAmizade, sizeof(caminhoAmizade), "%s/%s", caminhoPastaEntrada,
-           docAmizade);
-
-  FILE *arquivoAmizade = fopen(caminhoAmizade, "r");
-
-  if (!arquivoAmizade) {
-    printf("Erro ao abrir o arquivo %s\n", caminhoAmizade);
-    return NULL;
-  }
-
-  ListaDeUsuario *usuarios = criaListaDeUsuario();
-
-  char nome[100];
-  char amigo[100];
-  char aux;
-
-  // na primeira linha do arquivo de amizades, enquanto o caracter auxiliar for
-  // ';' continua colocando os usuarios na lista
-  do {
-    fscanf(arquivoAmizade, "%[^;\n]%c", nome, &aux);
-    insereUsuario(usuarios, criaUsuario(nome));
-  } while (aux == ';');
-
-  // atribuir as amizades dos usuarios que foram colocados na lista
-  while (!feof(arquivoAmizade)) {
-    fscanf(arquivoAmizade, "%[^;\n];%[^\n]%*c", nome, amigo);
-    adicionaAmigo(buscaUsuarioPorNome(usuarios, nome),
-                  buscaUsuarioPorNome(usuarios, amigo));
-  }
-
-  fclose(arquivoAmizade);
-
-  return usuarios;
+    return played->musicas;
 }
 
-void *lePlaylistsUsuarios(char *caminhoPastaEntrada, PlayED *played) {
-  char *docPlaylist = "playlists.txt";
-  char caminhoPlaylist[TAM_NOME_CAMINHO];
+ListaDeUsuario *leListaDeUsuario(char *caminhoPastaEntrada)
+{
+    char *docAmizade = "amizade.txt";
+    char caminhoAmizade[TAM_NOME_CAMINHO];
 
-  snprintf(caminhoPlaylist, sizeof(caminhoPlaylist), "%s/%s",
-           caminhoPastaEntrada, docPlaylist);
-  FILE *arquivoPlaylist = fopen(caminhoPlaylist, "r");
+    sprintf(caminhoAmizade, "%s/%s", caminhoPastaEntrada, docAmizade);
 
-  if (!arquivoPlaylist) {
-    printf("Erro ao abrir o arquivo %s\n", caminhoPlaylist);
-    return NULL;
-  }
+    FILE *arquivoAmizade = fopen(caminhoAmizade, "r");
 
-  char nome[100];
-  char nomePlaylist[100];
-  char aux = ';';
-  int qtdPlaylists;
-
-  // le o arquivo de playlist e vai fazendo atribuição linha a linha
-  while (!feof(arquivoPlaylist)) {
-
-    // le cada a linha do arquivo e atribuir as playlists p/ cada usuario
-    fscanf(arquivoPlaylist, "%[a-zA-Z]%*c%d%c", nome, &qtdPlaylists, &aux);
-
-    Usuario *user = buscaUsuarioPorNome(played->usuarios, nome);
-    atribuiQtdPlaylistsUsuario(user, qtdPlaylists);
-
-    // le nome da playlist, cria ela e adiciona na lista de playlist do
-    // usuario
-    for (int i = 0; i < qtdPlaylists; i++) {
-      fscanf(arquivoPlaylist, "%[^.].txt%*c", nomePlaylist);
-      Playlist *playlist = criaPlaylist(nomePlaylist);
-
-      // abre o arquivo de cada playlist e insere cada musica;
-
-      char *docMusicas = nomePlaylist;
-      char caminhoMusicas[TAM_NOME_CAMINHO];
-      snprintf(caminhoMusicas, sizeof(caminhoMusicas), "%s/%s.txt",
-               caminhoPastaEntrada, docMusicas);
-
-      FILE *arquivoMusicas = fopen(caminhoMusicas, "r");
-
-      while (!feof(arquivoMusicas)) {
-
-        char nomeMusica[100] = "\n";
-        char nomeArtista[100] = "\n";
-        char musicaToda[100] = "\n";
-
-        fscanf(arquivoMusicas, "%[^\n]%*c", musicaToda);
-        int i = 0, j = 0, entrouNome = 0;
-        for (int j = 0; j < strlen(musicaToda); j++) {
-
-          if (!entrouNome && musicaToda[j] == ' ' && musicaToda[j + 1] == '-' &&
-              musicaToda[j + 2] == ' ') {
-            entrouNome = 1;
-            j = j + 2;
-          } else {
-            if (entrouNome) {
-              nomeMusica[i] = musicaToda[j];
-              i++;
-            } else
-              nomeArtista[j] = musicaToda[j];
-          }
-        }
-
-        Musica *musica = criaMusica(nomeMusica, nomeArtista);
-        insereMusicaNaPlaylist(playlist, musica);
-        insereMusica(played->musicas, musica);
-      }
-      fclose(arquivoMusicas);
-
-      inserePlaylistNaLista(retornaListaPlaylistUsuario(user), playlist);
-      inserePlaylistNaLista(played->playlists, playlist);
+    if (!arquivoAmizade)
+    {
+        printf("Erro ao abrir o arquivo %s\n", caminhoAmizade);
+        return NULL;
     }
-  }
-  fclose(arquivoPlaylist);
+
+    ListaDeUsuario *usuarios = criaListaDeUsuario();
+
+    char nome[100];
+    char amigo[100];
+    char aux;
+
+    // na primeira linha do arquivo de amizades, enquanto o caracter auxiliar for ';' continua colocando os usuarios na lista
+    do
+    {
+        fscanf(arquivoAmizade, "%[^;\n]%c", nome, &aux);
+        insereUsuario(usuarios, criaUsuario(nome));
+    } while (aux == ';');
+
+    // atribuir as amizades dos usuarios que foram colocados na lista
+    while (!feof(arquivoAmizade))
+    {
+        fscanf(arquivoAmizade, "%[^;\n];%[^\n]%*c", nome, amigo);
+        adicionaAmigo(buscaUsuarioPorNome(usuarios, nome),
+                      buscaUsuarioPorNome(usuarios, amigo));
+    }
+
+    fclose(arquivoAmizade);
+
+    return usuarios;
 }
 
-void liberaPlayED(PlayED *played) {
-  destroiListaEMusicas(retornaListaMusicas(played));
-  destroiListaEPlaylists(retornaListaPlaylists(played));
-  destroiListaEUsuarios(retornaListaUsuario(played));
-  free(played);
+void *lePlaylistsUsuarios(char *caminhoPastaEntrada, PlayED *played)
+{
+    char *docPlaylist = "playlists.txt";
+    char caminhoPlaylist[TAM_NOME_CAMINHO];
+
+    sprintf(caminhoPlaylist, "%s/%s", caminhoPastaEntrada, docPlaylist);
+    FILE *arquivoPlaylist = fopen(caminhoPlaylist, "r");
+
+    if (!arquivoPlaylist)
+    {
+        printf("Erro ao abrir o arquivo %s\n", caminhoPlaylist);
+        return NULL;
+    }
+
+    char nome[100];
+    char nomePlaylist[100];
+    char aux = ';';
+    int qtdPlaylists;
+
+    // le o arquivo de playlist e vai fazendo atribuição linha a linha
+    while (!feof(arquivoPlaylist))
+    {
+
+        // le cada a linha do arquivo e atribuir as playlists p/ cada usuario
+        fscanf(arquivoPlaylist, "%[a-zA-Z]%*c%d%c", nome, &qtdPlaylists, &aux);
+
+        Usuario *user = buscaUsuarioPorNome(played->usuarios, nome);
+        atribuiQtdPlaylistsUsuario(user, qtdPlaylists);
+
+        // le nome da playlist, cria ela e adiciona na lista de playlist do
+        // usuario
+        for (int i = 0; i < qtdPlaylists; i++)
+        {
+            fscanf(arquivoPlaylist, "%[^.].txt%*c", nomePlaylist);
+            Playlist *playlist = criaPlaylist(nomePlaylist);
+
+            // abre o arquivo de cada playlist e insere cada musica;
+
+            char *docMusicas = nomePlaylist;
+            char caminhoMusicas[TAM_NOME_CAMINHO];
+            sprintf(caminhoMusicas, "%s/%s.txt", caminhoPastaEntrada, docMusicas);
+
+            FILE *arquivoMusicas = fopen(caminhoMusicas, "r");
+
+            while (!feof(arquivoMusicas))
+            {
+
+                char nomeMusica[100] = "\n";
+                char nomeArtista[100] = "\n";
+                char musicaToda[100] = "\n";
+
+                fscanf(arquivoMusicas, "%[^\n]%*c", musicaToda);
+                int i = 0, j = 0, entrouNome = 0;
+                for (int j = 0; j < strlen(musicaToda); j++)
+                {
+
+                    if (!entrouNome && musicaToda[j] == ' ' && musicaToda[j + 1] == '-' && musicaToda[j + 2] == ' ')
+                    {
+                        entrouNome = 1;
+                        j = j + 2;
+                    }
+                    else
+                    {
+                        if (entrouNome)
+                        {
+                            nomeMusica[i] = musicaToda[j];
+                            i++;
+                        }
+                        else
+                            nomeArtista[j] = musicaToda[j];
+                    }
+                }
+
+                Musica *musica = criaMusica(nomeMusica, nomeArtista);
+                insereMusicaNaPlaylist(playlist, musica);
+                insereMusica(played->musicas, musica);
+            }
+            fclose(arquivoMusicas);
+
+            inserePlaylistNaLista(retornaListaPlaylistUsuario(user), playlist);
+            inserePlaylistNaLista(played->playlists, playlist);
+        }
+    }
+    fclose(arquivoPlaylist);
+}
+
+PlayED *criaPlayED(char *caminhoPastaEntrada)
+{
+    PlayED *played = (PlayED *)malloc(sizeof(PlayED));
+    played->usuarios = leListaDeUsuario(caminhoPastaEntrada);
+    played->musicas = criaListaDeMusica();
+    played->playlists = criaListaDePlaylist();
+    lePlaylistsUsuarios(caminhoPastaEntrada, played);
+
+    return played;
 }
 
 /*Comentário pra guiar o programa:
@@ -173,293 +193,317 @@ Esquema de refatoração:
     - Repete o processo até a lista de playlists da pessoa estar vazia
     - Insere a Nova Lista de Playlists na pessoa
 - Passa pra proxima pessoa da lista de usuários
-
-funções auxiliares que criei/modifiquei pra ajudar no problema:
-
-MUSICA.C:
-- ehVaziaListaPlaylist(ListaDePlaylist *lista)
-- retornaProxMusica(ListaDeMusica *lista, Musica *musica)
-- retornaPrimMusica(ListaDeMusica *lista)
-
-PLAYLIST.C:
-- ehVaziaPlaylist(Playlist* playlist)
-- ehVaziaListaPlaylist(ListaDePlaylist* lista)
-- retornaPrimMusicaPlaylist(Playlist* playlist)
-- retornaProxMusicaPlaylist(Playlist *playlist, Musica *musica)
-- ehPlaylistDoArtista(Playlist *playlist, Musica* musica)
-- retornaProxPlaylist(ListaDePlaylist *lista, Playlist *playlist)
-- retornaPrimPlaylist(ListaDePlaylist *lista)
-- buscaPlaylistPorNome(ListaDePlaylist *lista, char *nome)
-
-USUARIO.C:
-- retornaPrimUsuario(ListaDeUsuario *lista)
-- retornaProxUsuario(ListaDeUsuario *lista, Usuario *usuario)
-- ehVaziaListaPlaylistUsuario(Usuario* usuario)
 */
 
-void refatoraPlayED(PlayED *played) {
-  Usuario *user = retornaPrimUsuario(played->usuarios);
+void refatoraPlayED(PlayED *played)
+{
+    Usuario *user = retornaPrimUsuario(played->usuarios);
 
-  // varre a lista de usuarios ate o final
-  while (user != NULL) {
-    ListaDePlaylist *listaPlaylist = retornaListaPlaylistUsuario(user);
+    // varre a lista de usuarios ate o final
+    while (user != NULL)
+    {
+        int qtdePlaylists = 0;
+        ListaDePlaylist *listaPlaylist = retornaListaPlaylistUsuario(user);
 
-    // essa nova lista de playlists é organizada por artistas
-    ListaDePlaylist *novaListaPlaylist = criaListaDePlaylist();
+        // essa nova lista de playlists é organizada por artistas
+        ListaDePlaylist *novaListaPlaylist = criaListaDePlaylist();
 
-    // coloca as musicas na playlist nova e tira da antiga ate esvaziar
-    while (!ehVaziaListaPlaylistUsuario(user)) {
-      Playlist *playlist = retornaPrimPlaylist(listaPlaylist);
+        // coloca as musicas na playlist nova e tira da antiga ate esvaziar
+        while (!ehVaziaListaPlaylistUsuario(user))
+        {
+            Playlist *playlist = retornaPrimPlaylist(listaPlaylist);
 
-      while (!ehVaziaPlaylist(playlist)) {
+            while (!ehVaziaPlaylist(playlist))
+            {
 
-        Musica *musica = retornaPrimMusicaPlaylist(playlist);
-        Playlist *playlistDoArtista = buscaPlaylistPorNome(
-            novaListaPlaylist, retornaArtistaMusica(musica));
+                Musica *musica = retornaPrimMusicaPlaylist(playlist);
+                Playlist *playlistDoArtista = buscaPlaylistPorNome(
+                    novaListaPlaylist, retornaArtistaMusica(musica));
 
-        // se nao existir uma playlist com o nome do artista vai criar uma nova
-        // e colocar na lista nova
-        if (playlistDoArtista == NULL) {
-          playlistDoArtista = criaPlaylist(retornaArtistaMusica(musica));
-          inserePlaylistNaLista(novaListaPlaylist, playlistDoArtista);
-          inserePlaylistNaLista(played->playlists, playlistDoArtista);
+                // se nao existir uma playlist com o nome do artista vai criar uma nova
+                // e colocar na lista nova
+                if (playlistDoArtista == NULL)
+                {
+                    playlistDoArtista = criaPlaylist(retornaArtistaMusica(musica));
+                    inserePlaylistNaLista(novaListaPlaylist, playlistDoArtista);
+                    inserePlaylistNaLista(played->playlists, playlistDoArtista);
+                    qtdePlaylists++;
+                }
+
+                insereMusicaNaPlaylist(playlistDoArtista, musica);
+                retiraMusicaDaPlaylist(playlist, musica);
+            }
+            // quando a playlist for vazia tem que retirar da lista de playlist e
+            // destruir
+            retiraPlaylistDaLista(listaPlaylist, playlist);
+            retiraPlaylistDaLista(played->playlists, playlist);
+            destroiPlaylist(playlist);
         }
 
-        insereMusicaNaPlaylist(playlistDoArtista, musica);
-        retiraMusicaDaPlaylist(playlist, musica);
-      }
-      // quando a playlist for vazia tem que retirar da lista de playlist e
-      // destruir
-      retiraPlaylistDaLista(listaPlaylist, playlist);
-      retiraPlaylistDaLista(played->playlists, playlist);
-      destroiPlaylist(playlist);
+        // quando a lista de playlist do usuario for vazia, bota a nova lista de
+        // playlist refatorada no usuario
+        destroiListaDePlaylist(listaPlaylist);
+        insereListaPlaylistUsuario(user, novaListaPlaylist);
+        atribuiQtdPlaylistsUsuario(user, qtdePlaylists);
+        user = retornaProxUsuario(played->usuarios, user);
     }
-
-    // quando a lista de playlist do usuario for vazia, bota a nova lista de
-    // playlist refatorada no usuario
-    destroiListaDePlaylist(listaPlaylist);
-    insereListaPlaylistUsuario(user, novaListaPlaylist);
-    user = retornaProxUsuario(played->usuarios, user);
-  }
 }
 
-void imprimePlayEDRefatorada(PlayED *played, char *caminhoPastaSaida) {
-  char *docRefatora = "played-refatorada.txt";
-  char caminhoRefatora[TAM_NOME_CAMINHO];
-  char caminhoPastaUsuario[TAM_NOME_CAMINHO];
-  char *nomePlaylist = NULL;
-  char caminhoPlaylist[TAM_NOME_CAMINHO];
+void imprimePlayEDRefatorada(PlayED *played, char *caminhoPastaSaida)
+{
+    char *docRefatora = "played-refatorada.txt";
+    char caminhoRefatora[TAM_NOME_CAMINHO];
+    char caminhoPastaUsuario[100];
+    char *nomePlaylist = NULL;
+    char caminhoPlaylist[TAM_NOME_CAMINHO];
 
-  snprintf(caminhoRefatora, sizeof(caminhoRefatora), "%s/%s", caminhoPastaSaida,
-           docRefatora);
+    sprintf(caminhoRefatora, "%s/%s", caminhoPastaSaida, docRefatora);
 
-  FILE *arquivoRefatora = fopen(caminhoRefatora, "w");
+    FILE *arquivoRefatora = fopen(caminhoRefatora, "w");
 
-  if (!arquivoRefatora) {
-    printf("Erro ao abrir o arquivo %s\n", caminhoRefatora);
-    return;
-  }
-
-  Usuario *user = retornaPrimUsuario(played->usuarios);
-,
-  // varre a lista de usuarios ate o final
-  while (user != NULL) {
-    imprimeUsuarioArquivo(user, arquivoRefatora);
-
-    snprintf(caminhoPastaUsuario, sizeof(caminhoPastaUsuario), "%s/%s",
-             caminhoPastaSaida, retornaNomeUsuario(user));
-
-    mkdir(caminhoPastaUsuario, 0700);
-
-    ListaDePlaylist *listaPlaylist = retornaListaPlaylistUsuario(user);
-    Playlist *playlist = retornaPrimPlaylist(listaPlaylist);
-
-    // Gera o arquivo das playlists dentro da pasta
-    while (playlist != NULL) {
-      nomePlaylist = retornaNomePlaylist(playlist);
-
-      snprintf(caminhoPlaylist, sizeof(caminhoPlaylist), "%s/%s.txt",
-               caminhoPastaUsuario, nomePlaylist);
-
-      FILE *arquivoPlaylist = fopen(caminhoPlaylist, "w");
-
-      if (!arquivoPlaylist) {
-        printf("Erro ao abrir o arquivo %s\n", caminhoPlaylist);
+    if (!arquivoRefatora)
+    {
+        printf("Erro ao abrir o arquivo %s\n", caminhoRefatora);
         return;
-      }
-
-      imprimeMusicasArquivoPlaylist(playlist, arquivoPlaylist);
-
-      fclose(arquivoPlaylist);
-
-      playlist = retornaProxPlaylist(listaPlaylist, playlist);
     }
 
-    user = retornaProxUsuario(played->usuarios, user);
-  }
+    Usuario *user = retornaPrimUsuario(played->usuarios);
 
-  fclose(arquivoRefatora);
-}
+    // varre a lista de usuarios ate o final
+    while (user != NULL)
+    {
+        imprimeUsuarioArquivo(user, arquivoRefatora);
 
-void imprimeSimilaridades(PlayED *played, char *caminhoPastaSaida) {
-  char *docSimilaridades = "similaridades.txt";
-  char caminhoSimilaridades[TAM_NOME_CAMINHO];
+        sprintf(caminhoPastaUsuario, "%s/%s", caminhoPastaSaida, retornaNomeUsuario(user));
 
-  snprintf(caminhoSimilaridades, sizeof(caminhoSimilaridades), "%s/%s",
-           caminhoPastaSaida, docSimilaridades);
+        mkdir(caminhoPastaUsuario, 0700);
 
-  FILE *arquivoSimilaridades = fopen(caminhoSimilaridades, "w");
-  if (!arquivoSimilaridades) {
-    printf("Erro ao abrir o arquivo %s\n", caminhoSimilaridades);
-  }
-
-  Usuario *user = retornaPrimUsuario(played->usuarios);
-
-  // pega o primeiro usuario da lista de amigos
-  while (user != NULL) {
-    // pra cada usuario varre a lista de amigos dele
-    Usuario *amigo = retornaPrimUsuario(retornaListaAmigosUsuario(user));
-    int similaridades = 0;
-
-    // ve se o amigo ja passou no loop, se sim ele pula essa etapa
-
-    while (amigo != NULL) {
-      if (!retornaSimilaridadeUsuario(amigo)) {
-        // vai olhar todas as musicas da playlist do usuario e ver se o amigo
-        // tem uma igual
         ListaDePlaylist *listaPlaylist = retornaListaPlaylistUsuario(user);
         Playlist *playlist = retornaPrimPlaylist(listaPlaylist);
 
-        while (playlist != NULL) {
-          Musica *musica = retornaPrimMusicaPlaylist(playlist);
+        // gera o arquivo das playlists dentro da pasta
+        while (playlist != NULL)
+        {
+            nomePlaylist = retornaNomePlaylist(playlist);
 
-          while (musica != NULL) {
-            ListaDePlaylist *listaPlaylistAmigo =
-                retornaListaPlaylistUsuario(amigo);
-            if (buscaMusicaNaListaPlaylist(listaPlaylistAmigo, musica) !=
-                NULL) {
-              similaridades++;
+            sprintf(caminhoPlaylist, "%s/%s.txt", caminhoPastaUsuario, nomePlaylist);
+
+            FILE *arquivoPlaylist = fopen(caminhoPlaylist, "w");
+
+            if (!arquivoPlaylist)
+            {
+                printf("Erro ao abrir o arquivo %s\n", caminhoPlaylist);
+                return;
             }
 
-            musica = retornaProxMusicaPlaylist(playlist, musica);
-          }
+            imprimeMusicasArquivoPlaylist(playlist, arquivoPlaylist);
 
-          playlist = retornaProxPlaylist(listaPlaylist, playlist);
+            fclose(arquivoPlaylist);
+
+            playlist = retornaProxPlaylist(listaPlaylist, playlist);
         }
 
-        fprintf(arquivoSimilaridades, "%s;%s;%d\n", retornaNomeUsuario(user),
-                retornaNomeUsuario(amigo), similaridades);
-      }
-
-      similaridades = 0;
-      amigo = retornaProxUsuario(retornaListaAmigosUsuario(user), amigo);
+        user = retornaProxUsuario(played->usuarios, user);
     }
-    atribuiSimilaridadeAoUsuario(user);
-    user = retornaProxUsuario(played->usuarios, user);
-  }
 
-  fclose(arquivoSimilaridades);
+    fclose(arquivoRefatora);
 }
 
-void mergePlayED(PlayED *played) {
-  Usuario *user = retornaPrimUsuario(played->usuarios);
+/*Comentário pra guiar o programa:
+Esquema de similaridades:
+-Pega o primeiro usuário da lista de usuários
+- Pega o primeiro amigo da lista de amigos desse usuário
+    -  Verifica se esse amigo já passou pelo loop principal (flag similaridade = 1)
+    - Se for, passa pro próximo amigo
+        - Caso não seja, abre a lista de playlist do usuário, pega a primeira playlist
+            - pega a primeira música dessa playlist
+                - busca essa música na lista de playlist do amigo
+                    - se essa musica existir, aumenta o contador similaridades
+            -passa pra próxima musica e repete o processo ate o final da playlist
+        - Passa para próxima playlist ate o final da lista de playlist
+    -imprime no arquivo a quantidade de similaridades entre os dois amigos
+    - reseta o contador de similaridade
+    - passa pro próximo amigo ate chegar no final da lista de amigos
+- Marca o usuario com a flag similaridade
+- passa pro próximo usuário até chegar no ultimo
+*/
 
-  // pega o primeiro usuario da lista de amigos
-  while (user != NULL) {
-    // pra cada usuario varre a lista de amigos dele
-    ListaDePlaylist *listaPlaylist = retornaListaPlaylistUsuario(user);
-    Playlist *playlist = retornaPrimPlaylist(listaPlaylist);
+void imprimeSimilaridades(PlayED *played, char *caminhoPastaSaida)
+{
+    char *docSimilaridades = "similaridades.txt";
+    char caminhoSimilaridades[TAM_NOME_CAMINHO];
 
-    // DEBUG
-    printf("USUARIO %s\n", retornaNomeUsuario(user));
+    sprintf(caminhoSimilaridades, "%s/%s", caminhoPastaSaida, docSimilaridades);
 
-    while (playlist != NULL) {
-      Usuario *amigo = retornaPrimUsuario(retornaListaAmigosUsuario(user));
+    FILE *arquivoSimilaridades = fopen(caminhoSimilaridades, "w");
+    if (!arquivoSimilaridades)
+    {
+        printf("Erro ao abrir o arquivo %s\n", caminhoSimilaridades);
+    }
 
-      // DEBUG
-      printf("CHEGOU PLAYLIST %s\n", retornaNomePlaylist(playlist));
+    Usuario *user = retornaPrimUsuario(played->usuarios);
 
-      while (amigo != NULL) {
+    // pega o primeiro usuario da lista de amigos
+    while (user != NULL)
+    {
+        // pra cada usuario varre a lista de amigos dele
+        Usuario *amigo = retornaPrimUsuario(retornaListaAmigosUsuario(user));
+        int similaridades = 0;
 
-        // DEBUG
-        printf("CHEGOU AMIGO %s\n", retornaNomeUsuario(amigo));
-        ListaDePlaylist *listaPlaylistAmigo =
-            retornaListaPlaylistUsuario(amigo);
-        Playlist *playlistAmigo = buscaPlaylistPorNome(
-            listaPlaylistAmigo, retornaNomePlaylist(playlist));
-        ListaDeMusica *novasMusicas;
+        // ve se o amigo ja passou no loop, se sim ele pula essa etapa
 
-        if (playlistAmigo) {
-          printf("TEM IGUAL\n");
-          Musica *musicaAmigo = retornaPrimMusicaPlaylist(playlistAmigo);
-          while (musicaAmigo != NULL) {
-            printf("MUSICA %s\n", retornaNomeMusica(musicaAmigo));
+        while (amigo != NULL)
+        {
+            if (!retornaSimilaridadeUsuario(amigo))
+            {
+                // vai olhar todas as musicas da playlist do usuario e ver se o amigo
+                // tem uma igual
+                ListaDePlaylist *listaPlaylist = retornaListaPlaylistUsuario(user);
+                Playlist *playlist = retornaPrimPlaylist(listaPlaylist);
 
-            if (!estaNaListaMusica(retornaListaMusica(playlist), musicaAmigo)) {
-              printf("ENTRA NA LISTA\n");
-              insereMusicaNaPlaylist(playlist, musicaAmigo);
+                while (playlist != NULL)
+                {
+                    Musica *musica = retornaPrimMusicaPlaylist(playlist);
+
+                    while (musica != NULL)
+                    {
+                        ListaDePlaylist *listaPlaylistAmigo =
+                            retornaListaPlaylistUsuario(amigo);
+                        if (buscaMusicaNaListaPlaylist(listaPlaylistAmigo, musica) != NULL)
+                            similaridades++;
+
+                        musica = retornaProxMusicaPlaylist(playlist, musica);
+                    }
+
+                    playlist = retornaProxPlaylist(listaPlaylist, playlist);
+                }
+
+                fprintf(arquivoSimilaridades, "%s;%s;%d\n", retornaNomeUsuario(user),
+                        retornaNomeUsuario(amigo), similaridades);
             }
-            musicaAmigo = retornaProxMusicaPlaylist(playlistAmigo, musicaAmigo);
-          }
-        } else {
-          printf("NAO TEM IGUAL\n");
+
+            similaridades = 0;
+            amigo = retornaProxUsuario(retornaListaAmigosUsuario(user), amigo);
         }
-
-        amigo = retornaProxUsuario(retornaListaAmigosUsuario(user), amigo);
-      }
-
-      if (ehUltimaPlaylist(listaPlaylist, playlist)) {
-        printf("CHEGOU PLAYLIST %s\n", retornaNomePlaylist(playlist));
-      }
-      playlist = retornaProxPlaylist(listaPlaylist, playlist);
+        atribuiSimilaridadeAoUsuario(user);
+        user = retornaProxUsuario(played->usuarios, user);
     }
 
-    // DEBUG
-    printf("TERMINOU USER\n");
-    user = retornaProxUsuario(played->usuarios, user);
-  }
+    fclose(arquivoSimilaridades);
 }
 
-void imprimePlayEDMerged(PlayED *played) {
+/*Comentário pra guiar o programa:
+Esquema de merge:
+- Pega a primeira pessoa da lista de usuários
+    - Pega a primeira playlist dessa pessoa
+        - Pega a primeira música da playlist
+          - Pega o primeiro amigo da pesssoa
+            - Verifica se o amigo tem a playlist de mesmo nome
+            - Se não tiver pula o processo
+            - Se tiver, passa pelas músicas da playlist do amigo
+                - Verifica se a música da playlist do amigo está na playlist da pessoa
+                - Se não estiver, coloca a música na playlist da pessoa
+        - Passa por todos os amigos da pessoa
+    - Passa por todas as playlists da pessoa
+- Passa por todas as pessoas da lista de usuários
+*/
 
-  char caminhoPastaUsuario[TAM_NOME_CAMINHO];
-  char *nomePlaylist = NULL;
-  char caminhoPlaylist[TAM_NOME_CAMINHO];
+void mergePlayED(PlayED *played)
+{
+    Usuario *user = retornaPrimUsuario(played->usuarios);
 
-  Usuario *user = retornaPrimUsuario(played->usuarios);
+    // varre a lista de usuarios ate o final
+    while (user != NULL)
+    {
+        ListaDePlaylist *listaPlaylist = retornaListaPlaylistUsuario(user);
+        Playlist *playlist = retornaPrimPlaylist(listaPlaylist);
 
-  // varre a lista de usuarios ate o final
-  while (user != NULL) {
+        // varre a lista de playlist do usuario
+        while (playlist != NULL)
+        {
+            Usuario *amigo = retornaPrimUsuario(retornaListaAmigosUsuario(user));
 
-    snprintf(caminhoPastaUsuario, sizeof(caminhoPastaUsuario), "Merge/%s",
-             retornaNomeUsuario(user));
+            // varre a lista de amigos do usuario
+            while (amigo != NULL)
+            {
+                ListaDePlaylist *listaPlaylistAmigo =
+                    retornaListaPlaylistUsuario(amigo);
+                Playlist *playlistAmigo = buscaPlaylistPorNome(
+                    listaPlaylistAmigo, retornaNomePlaylist(playlist));
+                ListaDeMusica *novasMusicas;
 
-    mkdir(caminhoPastaUsuario, 0700);
+                // se o amigo tiver a playlist com o mesmo nome busca as musicas
+                if (playlistAmigo)
+                {
+                    Musica *musicaAmigo = retornaPrimMusicaPlaylist(playlistAmigo);
 
-    ListaDePlaylist *listaPlaylist = retornaListaPlaylistUsuario(user);
-    Playlist *playlist = retornaPrimPlaylist(listaPlaylist);
+                    // varre a lista de musicas do amigo
+                    while (musicaAmigo != NULL)
+                    {
+                        // se a musica do amigo nao estiver na playlist do usuario insere
+                        if (!estaNaListaMusica(retornaListaMusica(playlist), musicaAmigo))
+                            insereMusicaNaPlaylist(playlist, musicaAmigo);
+                        musicaAmigo = retornaProxMusicaPlaylist(playlistAmigo, musicaAmigo);
+                    }
+                }
 
-    // Gera o arquivo das playlists dentro da pasta
-    while (playlist != NULL) {
-      nomePlaylist = retornaNomePlaylist(playlist);
+                amigo = retornaProxUsuario(retornaListaAmigosUsuario(user), amigo);
+            }
 
-      snprintf(caminhoPlaylist, sizeof(caminhoPlaylist), "%s/%s.txt",
-               caminhoPastaUsuario, nomePlaylist);
+            playlist = retornaProxPlaylist(listaPlaylist, playlist);
+        }
 
-      FILE *arquivoPlaylist = fopen(caminhoPlaylist, "w");
-
-      if (!arquivoPlaylist) {
-        printf("Erro ao abrir o arquivo %s\n", caminhoPlaylist);
-        return;
-      }
-
-      imprimeMusicasArquivoPlaylist(playlist, arquivoPlaylist);
-
-      fclose(arquivoPlaylist);
-
-      playlist = retornaProxPlaylist(listaPlaylist, playlist);
+        user = retornaProxUsuario(played->usuarios, user);
     }
+}
 
-    user = retornaProxUsuario(played->usuarios, user);
-  }
+void imprimePlayEDMerged(PlayED *played)
+{
+    char caminhoPastaUsuario[100];
+    char *nomePlaylist = NULL;
+    char caminhoPlaylist[TAM_NOME_CAMINHO];
+
+    Usuario *user = retornaPrimUsuario(played->usuarios);
+
+    while (user != NULL)
+    {
+        sprintf(caminhoPastaUsuario, "Merge/%s", retornaNomeUsuario(user));
+
+        mkdir(caminhoPastaUsuario, 0700);
+
+        ListaDePlaylist *listaPlaylist = retornaListaPlaylistUsuario(user);
+        Playlist *playlist = retornaPrimPlaylist(listaPlaylist);
+
+        // gera o arquivo das playlists dentro da pasta
+        while (playlist != NULL)
+        {
+            nomePlaylist = retornaNomePlaylist(playlist);
+
+            sprintf(caminhoPlaylist, "%s/%s.txt", caminhoPastaUsuario, nomePlaylist);
+
+            FILE *arquivoPlaylist = fopen(caminhoPlaylist, "w");
+
+            if (!arquivoPlaylist)
+            {
+                printf("Erro ao abrir o arquivo %s\n", caminhoPlaylist);
+                return;
+            }
+
+            imprimeMusicasArquivoPlaylist(playlist, arquivoPlaylist);
+
+            fclose(arquivoPlaylist);
+
+            playlist = retornaProxPlaylist(listaPlaylist, playlist);
+        }
+
+        user = retornaProxUsuario(played->usuarios, user);
+    }
+}
+
+void liberaPlayED(PlayED *played)
+{
+    destroiListaEMusicas(retornaListaMusicas(played));
+    destroiListaEPlaylists(retornaListaPlaylists(played));
+    destroiListaEUsuarios(retornaListaUsuario(played));
+    free(played);
 }

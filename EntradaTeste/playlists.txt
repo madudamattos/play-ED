@@ -1,2 +1,0 @@
-Madu;1;madu.txt
-Barbara;1;barb.txt
